@@ -22,7 +22,6 @@ IO_Print_ax:
 IO_Print_stack:
     ; | stack top   |
     ; | call-saved  |
-    ; | row:col     |
     ; | length      |
     ; | address     |
     ;; save and renew base of stack.
@@ -33,9 +32,10 @@ IO_Print_stack:
     push cx
     push dx
 
-    mov dx, [bp+4] ; dh=0ah(row), dl=00h(column)
-    mov cx, [bp+6]  ; length of string
-    mov bp, [bp+8]  ; es:bp, start of string
+    call SC_GetCursor
+    ;mov dx, [bp+4] ; dh=0ah(row), dl=00h(column)
+    mov cx, [bp+4]  ; length of string
+    mov bp, [bp+6]  ; es:bp, start of string
     mov ax, 01301h ; ah=13h, al=01h
     mov bx, 000ch  ; bh=00h(page), bl=0ch(color)
     int 10h
@@ -109,12 +109,6 @@ _over:
     pop cx
     pop bx
     pop ax
-    ret
-
-IO_PutNumber:
-    ; put a 0-9 number in al to screen
-    add al, 30h
-    call IO_PutChar
     ret
 
 IO_GetChar:

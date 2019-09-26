@@ -11,7 +11,6 @@
 
     push String ; address
     push 13 ; length
-    push 0a00h ; row:col
     call IO_Print_stack
 
 _LOOP:
