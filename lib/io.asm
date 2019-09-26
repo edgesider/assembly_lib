@@ -1,9 +1,8 @@
 %ifndef LIB_IO
 %define LIB_IO
 
-%include "control.asm"
-
-Print_ax:
+IO_Print_ax:
+    ; print string pointed by ax
     push ax
     push bx
     push cx
@@ -20,7 +19,7 @@ Print_ax:
     pop ax
     ret
 
-Print_stack:
+IO_Print_stack:
     ; | stack top   |
     ; | call-saved  |
     ; | row:col     |
@@ -48,7 +47,7 @@ Print_stack:
     pop bp
     ret
 
-Putchar:
+IO_PutChar:
     ; print char and move cursor
     ; the char is in al
     ; if it is backspace, move cursor back
@@ -57,25 +56,30 @@ Putchar:
     push cx
 
     cmp al, 08h ; backspace
-    jnz _ELSE
-    call MoveCursorBackward
+    jnz _else0
+    call SC_MoveCursorBackward
     mov al, ' '
-    call Putchar
-    call MoveCursorBackward
-    jmp _DONE
-_ELSE:
+    call IO_PutChar
+    call SC_MoveCursorBackward
+    jmp _done0
+_else0:
+    cmp al, 0dh ; enter/return
+    jnz _else1
+    call SC_MoveCursorNextLine
+    jmp _done0
+_else1:
     mov ah, 0ah
     mov bh, 00h
     mov cx, 01h
     int 10h
-    call MoveCursorForward
-_DONE:
+    call SC_MoveCursorForward
+_done0:
     pop cx
     pop bx
     pop ax
     ret
 
-Printnum:
+IO_PrintNum:
     ; print number in ax
     push ax
     push bx
@@ -97,7 +101,7 @@ _lp2:
     pop dx
     add dx, 30h
     mov al, dl
-    call Putchar
+    call IO_PutChar
     dec cx
     jmp _lp2
 _over:
@@ -107,13 +111,13 @@ _over:
     pop ax
     ret
 
-Putnumber:
+IO_PutNumber:
     ; put a 0-9 number in al to screen
     add al, 30h
-    call Putchar
+    call IO_PutChar
     ret
 
-Getchar:
+IO_GetChar:
     ; get char to al
     push cx
     mov cx, 01h
@@ -121,5 +125,7 @@ Getchar:
     int 16h
     pop cx
     ret
+
+%include "control.asm"
 
 %endif

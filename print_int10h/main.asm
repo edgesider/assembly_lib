@@ -4,31 +4,29 @@
     mov ds, ax
     mov es, ax
 
-    call ClearScreen_Init
-    call ChangeCursor
-    call ChangeColor
+    call SC_Init
 
     mov al, 'a'
-    call Putchar
+    call IO_PutChar
 
     mov ax, 65535
-    call Printnum
+    call IO_PrintNum
 
     mov ax, String
-    call Print_ax
+    call IO_Print_ax
 
     push String ; address
     push 13 ; length
     push 0a00h ; row:col
-    call Print_stack
+    call IO_Print_stack
 
-    call MoveCursorForward
+    call SC_MoveCursorForward
     mov al, 'x'
-    call Putchar
+    call IO_PutChar
 
     jmp $
 
-%include "../lib/io.asm"
+%include "io.asm"
 
 String: db "Hello, world!"
 times 510-($-$$) db 0

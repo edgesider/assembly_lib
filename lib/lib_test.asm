@@ -3,38 +3,25 @@
     mov ax, cs
     mov ds, ax
     mov es, ax
-    ;call ClearScreen_PageUp
-    call ClearScreen_Init
-    call ChangeCursor
-    call ChangeColor
+    call SC_Init
 
-    mov al, 'a'
-    call Putchar
-
-    mov ax, 65535
-    call Printnum
 
     mov ax, String
-    call Print_ax
+    call IO_Print_ax
 
     push String ; address
     push 13 ; length
     push 0a00h ; row:col
-    call Print_stack
-
-    call MoveCursorForward
-    mov al, 'x'
-    call Putchar
+    call IO_Print_stack
 
 _LOOP:
-    call Getchar
-    call Putchar
+    call IO_GetChar
+    call IO_PutChar
     jmp _LOOP
 
     jmp $
 
 %include "io.asm"
-%include "control.asm"
 
 String: db "Hello, world!"
 times 510-($-$$) db 0
