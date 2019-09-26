@@ -37,7 +37,8 @@ IO_Print_stack:
     mov cx, [bp+4]  ; length of string
     mov bp, [bp+6]  ; es:bp, start of string
     mov ax, 01301h ; ah=13h, al=01h
-    mov bx, 000ch  ; bh=00h(page), bl=0ch(color)
+    mov bh, 00h  ; bh=00h(page)
+    mov bl, SC_Color
     int 10h
 
     pop dx

@@ -8,5 +8,5 @@ makehd: string.txt hd.img
 	dd if=string.txt of=hd.img conv=notrunc
 
 compile: main.asm
-	nasm main.asm -o main.bin -I../lib
+	nasm main.asm -o main.bin -I../../lib
 

@@ -5,9 +5,18 @@
     mov es, ax
 
     call SC_Init
-    mov dx, 1600h
+    mov dx, 0600h
     call SC_MoveCursor
-    call SC_Init
+
+    call SC_GetCursor
+    mov ax, 0
+    mov al, dh
+    call IO_PrintNum
+    call SC_MoveCursorNextLine
+    mov ax, 0
+    mov al, dl
+    call IO_PrintNum
+    call SC_MoveCursorNextLine
 
 _lp3:
     call IO_GetChar
