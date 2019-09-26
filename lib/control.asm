@@ -30,13 +30,13 @@ SC_ClearScreen_PageUp:
     int 10h
     ret
 
-SC_ClearScreen_Init:
-    ; reset display mode in order to clear screen
-    mov ah, 0fh ; get display mode to al
-    int 10h
-    mov ah, 00h ; set display mode from al
-    int 10h
-    ret
+;SC_ClearScreen_Init:
+    ;; reset display mode in order to clear screen
+    ;mov ah, 0fh ; get display mode to al
+    ;int 10h
+    ;mov ah, 00h ; set display mode from al
+    ;int 10h
+    ;ret
 
 SC_GetCursor:
     ; get cursor position and save to (dl, dh)-(x, y)
@@ -120,8 +120,8 @@ SC_MoveCursorNextLine:
 _move_nextline_over:
     ret
 
-SC_MoveCursorPrevLine:
-    ret
+;SC_MoveCursorPrevLine:
+    ;ret
 
 SC_InitCursor:
     ; set cursor to 0,0

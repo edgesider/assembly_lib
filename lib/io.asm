@@ -1,29 +1,14 @@
 %ifndef LIB_IO
 %define LIB_IO
 
-IO_Print_ax:
-    ; print string pointed by ax
-    push ax
-    push bx
-    push cx
-    push dx
-    mov bp, ax  ; es:bp, start of string
-    mov cx, 13  ; length of string
-    mov ax, 01301h ; ah=13h, al=01h
-    mov bx, 000ch  ; bh=00h(page), bl=0ch(color)
-    mov dx, 0900h  ; dh=0ah(row), dl=00h(column)
-    int 10h
-    pop dx
-    pop cx
-    pop bx
-    pop ax
-    ret
-
 IO_Print_stack:
-    ; | stack top   |
-    ; | call-saved  |
-    ; | length      |
+    ;-----------------
     ; | address     |
+    ; | length      |
+    ;-----------------
+    ; | call-saved  |
+    ; | stack top   |
+
     ;; save and renew base of stack.
     push bp
     mov bp, sp
@@ -121,6 +106,13 @@ IO_GetChar:
     pop cx
     ret
 
+IO_Error:
+    push ErrStr
+    push 6
+    call IO_Print_stack
+    jmp $
+
 %include "control.asm"
 
+ErrStr: db 'Error!'
 %endif
