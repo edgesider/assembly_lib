@@ -49,7 +49,7 @@ Buffer equ 0100h
     ;ret
 
 TEST_ReadSectorCHS:
-    push word 80h
+    push word 81h
     push word Buffer
     push dword 1200
     push word 1
@@ -67,5 +67,5 @@ TEST_ReadSectorCHS:
 
 infobuf resb DK_DiskInfo_size
 SuccStr: db "S"
-times 510-($-$$) db 0
-dw 0xaa55
+;times 510-($-$$) db 0
+;dw 0xaa55

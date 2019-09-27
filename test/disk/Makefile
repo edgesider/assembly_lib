@@ -1,11 +1,10 @@
 .PHONY : everything
 
-everything: fd.img compile
-	dd if=main.bin of=fd.img conv=notrunc
+everything: img/fd.img compile
+	dd if=bin/main.bin of=img/hda.img conv=notrunc
 
-makehd: string.txt hd.img
-	dd if=string.txt of=hd.img conv=notrunc
+makehd: img/string.txt img/hdb.img
+	dd if=img/string.txt of=img/hdb.img conv=notrunc
 
 compile: main.asm
-	nasm main.asm -o main.bin -I../../lib
-
+	nasm main.asm -o bin/main.bin -I../../lib

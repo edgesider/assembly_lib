@@ -7,14 +7,14 @@ romimage: file="/usr/share/bochs/BIOS-bochs-latest", address=0x0, options=none
 vgaromimage: file="/usr/share/bochs/VGABIOS-lgpl-latest"
 boot: floppy
 floppy_bootsig_check: disabled=0
-floppya: image="fd.img", status=inserted
+floppya: image="img/fd.img", status=inserted
 ata0: enabled=1, ioaddr1=0x1f0, ioaddr2=0x3f0, irq=14
-ata0-master: type=disk, path="hd.img", mode=flat
+ata0-master: type=disk, path="img/hda.img", mode=flat
 # CHS: 20/16/32
 #ata0-master: type=none
 ata0-slave: type=none
 ata1: enabled=1, ioaddr1=0x170, ioaddr2=0x370, irq=15
-ata1-master: type=none
+ata1-master: type=disk, path="img/hdb.img", mode=flat
 ata1-slave: type=none
 ata2: enabled=0
 ata3: enabled=0
