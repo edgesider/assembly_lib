@@ -7,7 +7,7 @@ struc DK_DiskInfo
     .SectorPerHead resb 1
 endstruc
 
-DK_ReadSector:
+DK_ReadSectorLBA:
     ; read sector via LBA
     ;---parameters----
     ; | disk index      |+18 byte

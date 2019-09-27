@@ -7,20 +7,23 @@ Buffer equ 0100h
 
     call SC_Init
     ;call TEST_ReadDiskInfo
+    call TEST_ReadSectorLBA
 
+    jmp $
+
+TEST_ReadSectorLBA:
     push byte 80h
     push dword Buffer
     push dword 0000h
     push dword 0001h
     push word 1
-    call DK_ReadSector
+    call DK_ReadSectorLBA
     jc IO_Error
 
     push Buffer
     push 5
     call IO_Print_stack
-
-    jmp $
+    ret
 
 ;TEST_ReadDiskInfo:
     ;push 80h ; drive number: hd1
