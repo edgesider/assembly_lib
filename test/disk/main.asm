@@ -6,24 +6,25 @@ Buffer equ 0100h
     mov es, ax
 
     call SC_Init
+    ;call TEST_ReadSector
     ;call TEST_ReadDiskInfo
-    call TEST_ReadSectorLBA
+    ;call TEST_ReadSectorLBA
 
     jmp $
 
-TEST_ReadSectorLBA:
-    push byte 80h
-    push dword Buffer
-    push dword 0000h
-    push dword 0001h
-    push word 1
-    call DK_ReadSectorLBA
-    jc IO_Error
+;TEST_ReadSectorLBA:
+    ;push byte 80h
+    ;push dword Buffer
+    ;push dword 0000h
+    ;push dword 0001h
+    ;push word 1
+    ;call DK_ReadSectorLBA
+    ;jc IO_Error
 
-    push Buffer
-    push 5
-    call IO_Print_stack
-    ret
+    ;push Buffer
+    ;push 5
+    ;call IO_Print_stack
+    ;ret
 
 ;TEST_ReadDiskInfo:
     ;push 80h ; drive number: hd1
@@ -48,30 +49,23 @@ TEST_ReadSectorLBA:
     ;ret
 
 ;TEST_ReadSector:
-    ;mov bx, Buffer
-    ;mov dl, 80h   ; first disk
-    ;mov ch, 00h   ; cylinder
-    ;mov cl, 01h   ; cylider-high-2:sector
-    ;mov dh, 00h   ; head
-    ;mov al, 1
-    ;mov ah, 02h ; read
-    ;int 13h
-    ;jc IO_Error; error on CF == 1
-    ;push SuccString
-    ;push 1
-    ;call IO_Print_stack
-    ;sub sp, 6
+    ;push word 80h
+    ;push word Buffer
+    ;push dword 1200
+    ;push word 1
+    ;call DK_ReadSectorCHS
+    ;add sp, 10
 
-    ;call SC_MoveCursorNextLine
-
-    ;push Buffer
-    ;push 5
+    ;push Buffer ; word
+    ;push 5 ; word
     ;call IO_Print_stack
+    ;add sp, 4
     ;ret
 
-%include "io.asm"
 %include "disk.asm"
+%include "io.asm"
 
 infobuf resb DK_DiskInfo_size
+SuccStr: db "S!"
 times 510-($-$$) db 0
 dw 0xaa55

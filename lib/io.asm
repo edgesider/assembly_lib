@@ -110,6 +110,7 @@ IO_Error:
     push ErrStr
     push 6
     call IO_Print_stack
+    add sp, 4
     jmp $
 
 %include "control.asm"
