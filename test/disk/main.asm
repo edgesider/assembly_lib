@@ -6,9 +6,9 @@ Buffer equ 0100h
     mov es, ax
 
     call SC_Init
-    ;call TEST_ReadSector
     ;call TEST_ReadDiskInfo
     ;call TEST_ReadSectorLBA
+    call TEST_ReadSectorCHS
 
     jmp $
 
@@ -48,24 +48,24 @@ Buffer equ 0100h
     ;call SC_MoveCursorNextLine
     ;ret
 
-;TEST_ReadSector:
-    ;push word 80h
-    ;push word Buffer
-    ;push dword 1200
-    ;push word 1
-    ;call DK_ReadSectorCHS
-    ;add sp, 10
+TEST_ReadSectorCHS:
+    push word 80h
+    push word Buffer
+    push dword 1200
+    push word 1
+    call DK_ReadSectorCHS
+    add sp, 10
 
-    ;push Buffer ; word
-    ;push 5 ; word
-    ;call IO_Print_stack
-    ;add sp, 4
-    ;ret
+    push Buffer ; word
+    push 5 ; word
+    call IO_Print_stack
+    add sp, 4
+    ret
 
 %include "disk.asm"
 %include "io.asm"
 
 infobuf resb DK_DiskInfo_size
-SuccStr: db "S!"
+SuccStr: db "S"
 times 510-($-$$) db 0
 dw 0xaa55
