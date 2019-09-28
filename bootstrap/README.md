@@ -6,6 +6,13 @@
 
 在`make`之后，`img/fd.img`中会被写入这个bootstrap，然后可以将其他程序写进第一个硬盘设备，在机器从软盘启动（`img/fd.img`）之后，就会自动加载这个程序。
 
+# Test Run
+
+```
+make createimg
+make test
+```
+
 ---
 
 The main.bin compiled from main.asm will load first 5120 bytes of hda and then jump to its start.

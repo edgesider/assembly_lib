@@ -1,1 +1,3 @@
 *.bin
+**.img
+!image_template/*
