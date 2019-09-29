@@ -2,7 +2,7 @@
 %define LIB_CONTROL
 
 SC_Color equ 03h ; black background and cyan frontground
-SC_Height equ 23
+SC_Height equ 25
 SC_Width equ 80
 SC_MaxCol equ SC_Width - 1
 SC_MaxRow equ SC_Height - 1
