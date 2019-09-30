@@ -3,6 +3,9 @@
 
 %include "control.asm"
 
+CH_Return equ 0x0d
+CH_Null equ 0x00
+
 struc IO_Cursor
     .row resb 1
     .col resb 1
@@ -14,11 +17,12 @@ endstruc
 
 IO_Init:
     push es
-    mov ax, IO_BufStart
+    mov ax, ds
     mov es, ax
-    mov di, 0
+    mov di, IO_BufStart
     mov cx, IO_Cursor_size + IO_LineUsage_size
     mov ax, 0
+    cld
     rep stosb
     pop es
     mov ax, 0xb800
@@ -33,6 +37,26 @@ IO_PrintStr:
     ;---:parameters----
     ; | call-saved  |+2
     ; | saved-bp    |+0 <--bp <--sp
+    push bp
+    mov bp, sp
+    push ax
+    push bx
+
+    mov ah, 0
+    mov bx, [bp+4]
+_print_str_loop0:
+    mov al, [bx]
+    inc bx
+    cmp al, 0
+    jz _print_str_end
+    push ax
+    call IO_PrintChar
+    add sp, 2
+    jmp _print_str_loop0
+_print_str_end:
+    pop bx
+    pop ax
+    pop bp
     ret
 
 IO_PrintChar:
@@ -79,6 +103,40 @@ _print_char_done:
     pop bp
     ret
 
+IO_PrintNum:
+    ; print number in ax
+    push ax
+    push bx
+    push cx
+    push dx
+
+    mov bx, 10
+    mov cx, 0
+_lp1:
+    mov dx, 0
+    div bx  ; dx:ax / bx == ax --- dx
+    push dx
+    inc cx
+    or ax, ax
+    jnz _lp1
+_lp2:
+    cmp cx, 0
+    jz _over
+    pop dx
+    add dx, 30h
+    push dx
+    call IO_PrintChar
+    add sp, 2
+    dec cx
+    jmp _lp2
+_over:
+    pop dx
+    pop cx
+    pop bx
+    pop ax
+    ret
+
+; ----utils----
 _IO_CursorCalcIndex:
     ; calculate cursor's linear index to bx
     push cx
@@ -101,15 +159,6 @@ _IO_PrintCharPure:
     mov [gs:bx], ax
     pop ax
     pop bx
-    ret
-
-IO_PrintNum2:
-    ;---parameters:----
-    ;               |+6
-    ; | number      |+4 word: number to print
-    ;---:parameters----
-    ; | call-saved  |+2
-    ; | saved-bp    |+0 <--bp <--sp
     ret
 
 _IO_CursorUpdate:
@@ -171,140 +220,44 @@ _stepback_done:
     ret
 
 _IO_LineUsageInc:
-    ; 0x8168
-    push es
+    push ax
     push bx
-    mov bx, 0
-    mov bl, [IO_CursorBuf+IO_Cursor.row]
-    mov ax, IO_LineUsageBuf
-    mov es, ax
-    inc byte [es:bx]
+    mov ax, 0
+    mov al, [IO_CursorBuf+IO_Cursor.row]
+    mov bx, IO_LineUsageBuf
+    add bx, ax
+    inc byte [bx]
     pop bx
-    pop es
+    pop ax
     ret
 
 _IO_LineUsageDec:
-    push es
+    push ax
     push bx
-    mov bx, 0
-    mov bl, [IO_CursorBuf+IO_Cursor.row]
-    mov ax, IO_LineUsageBuf
-    mov es, ax
-    dec byte [es:bx]
+    mov ax, 0
+    mov al, [IO_CursorBuf+IO_Cursor.row]
+    mov bx, IO_LineUsageBuf
+    add bx, ax
+    dec byte [bx]
     pop bx
-    pop es
+    pop ax
     ret
 
 _IO_LineUsageGet:
     ; get current line usage to bx
-    push es
-    mov bx, 0
-    mov bl, [IO_CursorBuf+IO_Cursor.row]
-    mov ax, IO_LineUsageBuf
-    mov es, ax
-    mov byte bl, [es:bx]
-    pop es
+    push ax
+    mov ax, 0
+    mov al, [IO_CursorBuf+IO_Cursor.row]
+    mov bx, IO_LineUsageBuf
+    add bx, ax
+    mov byte bl, [bx]
+    mov bh, 0
+    pop ax
     ret
 
 IO_CursorStepNewLine:
     inc byte [IO_CursorBuf+IO_Cursor.row]
     mov byte [IO_CursorBuf+IO_Cursor.col], 0
-    ret
-
-IO_Print_stack:
-    ;-----------------
-    ; | address     |
-    ; | length      |
-    ;-----------------
-    ; | call-saved  |
-    ; | stack top   |
-
-    ;; save and renew base of stack.
-    push bp
-    mov bp, sp
-    push ax
-    push bx
-    push cx
-    push dx
-
-    call SC_GetCursor
-    ;mov dx, [bp+4] ; dh=0ah(row), dl=00h(column)
-    mov cx, [bp+4]  ; length of string
-    mov bp, [bp+6]  ; es:bp, start of string
-    mov ax, 01301h ; ah=13h, al=01h
-    mov bh, 00h  ; bh=00h(page)
-    mov bl, SC_Color
-    int 10h
-
-    pop dx
-    pop cx
-    pop bx
-    pop ax
-    pop bp
-    ret
-
-IO_PutChar:
-    ; print char and move cursor
-    ; the char is in al
-    ; if it is backspace, move cursor back
-    push ax
-    push bx
-    push cx
-
-    cmp al, 08h ; backspace
-    jnz _else0
-    call SC_MoveCursorBackward
-    mov al, ' '
-    call IO_PutChar
-    call SC_MoveCursorBackward
-    jmp _done0
-_else0:
-    cmp al, 0dh ; enter/return
-    jnz _else1
-    call SC_MoveCursorNextLine
-    jmp _done0
-_else1:
-    mov ah, 0ah
-    mov bh, 00h
-    mov cx, 01h
-    int 10h
-    call SC_MoveCursorForward
-_done0:
-    pop cx
-    pop bx
-    pop ax
-    ret
-
-IO_PrintNum:
-    ; print number in ax
-    push ax
-    push bx
-    push cx
-    push dx
-
-    mov bx, 10
-    mov cx, 0
-_lp1:
-    mov dx, 0
-    div bx  ; dx:ax / bx == ax --- dx
-    push dx
-    inc cx
-    or ax, ax
-    jnz _lp1
-_lp2:
-    cmp cx, 0
-    jz _over
-    pop dx
-    add dx, 30h
-    mov al, dl
-    call IO_PutChar
-    dec cx
-    jmp _lp2
-_over:
-    pop dx
-    pop cx
-    pop bx
-    pop ax
     ret
 
 IO_GetChar:
@@ -318,9 +271,8 @@ IO_GetChar:
 
 IO_Error:
     push ErrStr
-    push 6
-    call IO_Print_stack
-    add sp, 4
+    call IO_PrintStr
+    add sp, 2
     jmp $
 
 ErrStr: db 'Error!'
