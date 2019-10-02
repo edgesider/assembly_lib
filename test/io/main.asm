@@ -5,7 +5,6 @@
     mov es, ax
 
     call SC_Init
-    call IO_Init
 
     push word 'L'
     call IO_PrintChar

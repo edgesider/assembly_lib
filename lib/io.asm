@@ -6,29 +6,6 @@
 CH_Return equ 0x0d
 CH_Null equ 0x00
 
-struc IO_Cursor
-    .row resb 1
-    .col resb 1
-endstruc
-
-struc IO_LineUsage
-    .usage resb SC_Height ; every item stores the number of valid char in corresponding line
-endstruc
-
-IO_Init:
-    push es
-    mov ax, ds
-    mov es, ax
-    mov di, IO_BufStart
-    mov cx, IO_Cursor_size + IO_LineUsage_size
-    mov ax, 0
-    cld
-    rep stosb
-    pop es
-    mov ax, 0xb800
-    mov gs, ax
-    ret
-
 IO_PrintStr:
     ; print null-terminated string to screen
     ;---parameters:----
@@ -81,22 +58,22 @@ IO_PrintChar:
     jmp _printable
 
 _print_char_return:
-    call IO_CursorStepNewLine
+    call SC_CursorStepNewLine
     jmp _print_char_done
 
 _print_char_back:
-    call IO_CursorStepBack
+    call SC_CursorStepBack
     mov al, ' '
     call _IO_PrintCharPure
     jmp _print_char_done
 
 _printable:
     call _IO_PrintCharPure
-    call IO_CursorStep
+    call SC_CursorStep
     jmp _print_char_done
 
 _print_char_done:
-    call _IO_CursorUpdate
+    call _SC_CursorUpdate
     pop bx
     pop cx
     pop ax
@@ -136,128 +113,16 @@ _over:
     pop ax
     ret
 
-; ----utils----
-_IO_CursorCalcIndex:
-    ; calculate cursor's linear index to bx
-    push cx
-    mov cx, 0
-    mov cl, [IO_CursorBuf+IO_Cursor.row]
-    mov bx, cx
-    imul bx, 80
-    mov cl, [IO_CursorBuf+IO_Cursor.col]
-    add bx, cx
-    pop cx
-    ret
-
 _IO_PrintCharPure:
-    ; print al purely
+    ; print character in al without moving cursor
     push bx
     push ax
-    call _IO_CursorCalcIndex
+    call _SC_CursorCalcIndex
     shl bx, 1
     mov ah, 0x07
     mov [gs:bx], ax
     pop ax
     pop bx
-    ret
-
-_IO_CursorUpdate:
-    push bx
-    push dx
-    push ax
-    call _IO_CursorCalcIndex ; index is now in bx
-    mov dx, 0x3d4
-    mov al, 0x0e
-    out dx, al
-    mov dx, 0x3d5
-    mov al, bh
-    out dx, al
-    mov dx, 0x3d4
-    mov al, 0x0f
-    out dx, al
-    mov dx, 0x3d5
-    mov al, bl
-    out dx, al
-    pop ax
-    pop dx
-    pop bx
-    ret
-
-IO_CursorStep:
-    push bx
-    mov bl, [IO_CursorBuf+IO_Cursor.col]
-    cmp bl, SC_MaxCol
-    jle _stepright
-    call IO_CursorStepNewLine
-    jmp _stepdone
-_stepright:
-    call _IO_LineUsageInc
-    inc byte [IO_CursorBuf+IO_Cursor.col]
-_stepdone:
-    pop bx
-    ret
-
-IO_CursorStepBack:
-    push bx
-    mov bl, [IO_CursorBuf+IO_Cursor.col]
-    cmp bl, 0
-    jle _stepback_last_line
-
-    ; move left
-    call _IO_LineUsageDec
-    dec byte [IO_CursorBuf+IO_Cursor.col]
-    jmp _stepback_done
-
-_stepback_last_line:
-    mov bl, [IO_CursorBuf+IO_Cursor.row]
-    cmp bl, 0
-    jz _stepback_done
-    dec byte [IO_CursorBuf+IO_Cursor.row]
-    call _IO_LineUsageGet
-    mov byte [IO_CursorBuf+IO_Cursor.col], bl
-_stepback_done:
-    pop bx
-    ret
-
-_IO_LineUsageInc:
-    push ax
-    push bx
-    mov ax, 0
-    mov al, [IO_CursorBuf+IO_Cursor.row]
-    mov bx, IO_LineUsageBuf
-    add bx, ax
-    inc byte [bx]
-    pop bx
-    pop ax
-    ret
-
-_IO_LineUsageDec:
-    push ax
-    push bx
-    mov ax, 0
-    mov al, [IO_CursorBuf+IO_Cursor.row]
-    mov bx, IO_LineUsageBuf
-    add bx, ax
-    dec byte [bx]
-    pop bx
-    pop ax
-    ret
-
-_IO_LineUsageGet:
-    ; get current line usage to bx
-    push ax
-    mov ax, 0
-    mov al, [IO_CursorBuf+IO_Cursor.row]
-    mov bx, IO_LineUsageBuf
-    add bx, ax
-    mov byte bl, [bx]
-    mov bh, 0
-    pop ax
-    ret
-
-IO_CursorStepNewLine:
-    inc byte [IO_CursorBuf+IO_Cursor.row]
-    mov byte [IO_CursorBuf+IO_Cursor.col], 0
     ret
 
 IO_GetChar:
@@ -276,7 +141,4 @@ IO_Error:
     jmp $
 
 ErrStr: db 'Error!'
-IO_BufStart:
-IO_CursorBuf: times IO_Cursor_size db 0
-IO_LineUsageBuf: times IO_LineUsage_size db 0
 %endif

@@ -6,51 +6,35 @@ Buffer equ 0100h
     mov es, ax
 
     call SC_Init
-    call IO_Init
-    ;call TEST_ReadDiskInfo
-    ;call TEST_ReadSectorLBA
-    call TEST_ReadSectorCHS
+    call TEST_ReadSector
 
     jmp $
 
-TEST_ReadSectorLBA:
-    push byte 81h
-    push dword Buffer
-    push dword 0000h
-    push dword 0001h
-    push word 1
-    call DK_ReadSectorLBA
-    add sp, 2+4+8+2
-    jc IO_Error
+TEST_ReadDiskInfo:
+    push 80h ; drive number: hd1
+    push word infobuf
+    call DK_ReadDiskInfo
 
-    mov byte [Buffer+5], 0
-    push word Buffer
-    call IO_PrintStr
+    mov ax, [infobuf + DK_DiskInfo.NumberofCylinder]
+    call IO_PrintNum
+    push word '/'
+    call IO_PrintChar
+    add sp, 2
+
+    mov ah, 0
+    mov al, [infobuf + DK_DiskInfo.HeadPerCylinder]
+    call IO_PrintNum
+    push word '/'
+    call IO_PrintChar
+    add sp, 2
+
+    mov al, [infobuf + DK_DiskInfo.SectorPerHead]
+    call IO_PrintNum
+
+    call SC_CursorStepNewLine
     ret
 
-;TEST_ReadDiskInfo:
-    ;push 80h ; drive number: hd1
-    ;push word infobuf
-    ;call DK_ReadDiskInfo
-
-    ;mov ax, [infobuf + DK_DiskInfo.NumberofCylinder]
-    ;call IO_PrintNum
-    ;mov al, '/'
-    ;call IO_PutChar
-
-    ;mov ah, 0
-    ;mov al, [infobuf + DK_DiskInfo.HeadPerCylinder]
-    ;call IO_PrintNum
-    ;mov al, '/'
-    ;call IO_PutChar
-
-    ;mov al, [infobuf + DK_DiskInfo.SectorPerHead]
-    ;call IO_PrintNum
-
-    ;call SC_MoveCursorNextLine
-    ;ret
-
-TEST_ReadSectorCHS:
+TEST_ReadSector:
     push byte 81h
     push dword Buffer
     push dword 0

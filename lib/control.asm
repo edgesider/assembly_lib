@@ -8,6 +8,15 @@ SC_MaxCol equ SC_Width - 1
 SC_MaxRow equ SC_Height - 1
 SC_CursorShape equ 0607h ; block-0007h, underline-0607h
 
+struc SC_Cursor
+    .row resb 1
+    .col resb 1
+endstruc
+
+struc SC_LineUsage
+    .usage resb SC_Height ; every item stores the number of valid char in corresponding line
+endstruc
+
 SC_Init:
     ; set size of screen
     ; clean screan
@@ -18,7 +27,18 @@ SC_Init:
     mov bh, SC_Color; black back, cyan front
     mov ah, 06h
     int 10h
-    call SC_InitCursor
+    push es
+    mov ax, ds
+    mov es, ax
+    mov di, SC_BufStart
+    mov cx, SC_Cursor_size + SC_LineUsage_size
+    mov ax, 0
+    cld
+    rep stosb
+    pop es
+    mov ax, 0xb800
+    mov gs, ax
+    ret
     ret
 
 SC_ClearScreen_PageUp:
@@ -38,101 +58,118 @@ SC_ClearScreen_Init:
     int 10h
     ret
 
-SC_GetCursor:
-    ; get cursor position and save to (dl, dh)-(x, y)
-    mov bx, 0h ; page
-    mov ah, 03h ; get cursor position
-    int 10h ; dh: y, dl: x
+_SC_CursorCalcIndex:
+    ; calculate cursor's linear index to bx
+    push cx
+    mov cx, 0
+    mov cl, [SC_CursorBuf+SC_Cursor.row]
+    mov bx, cx
+    imul bx, 80
+    mov cl, [SC_CursorBuf+SC_Cursor.col]
+    add bx, cx
+    pop cx
     ret
 
-SC_MoveCursor:
-    ; move cursor to (dl, dh).
-    ; auto-normalize
-    push bx
-    push ax
-    mov bx, 0 ; page
-    mov ah, 02h
-    int 10h
-    pop ax
-    pop bx
-    ret
-
-SC_MoveCursorBackward:
-    push ax
+_SC_CursorUpdate:
     push bx
     push dx
-    call SC_GetCursor
-
-    cmp dl, 0
-    jg _go_left
-    cmp dh, 0 ; 0,0
-    jng _move_backward_over
-    ; go prev line
-    mov dl, SC_MaxCol
-    dec dh ; row -= 1
-    mov ah, 02h
-    int 10h
-    jmp _move_backward_over
-_go_left:
-    dec dl
-    mov ah, 02h ; set cursor position
-    int 10h
-_move_backward_over:
+    push ax
+    call _SC_CursorCalcIndex ; index is now in bx
+    mov dx, 0x3d4
+    mov al, 0x0e
+    out dx, al
+    mov dx, 0x3d5
+    mov al, bh
+    out dx, al
+    mov dx, 0x3d4
+    mov al, 0x0f
+    out dx, al
+    mov dx, 0x3d5
+    mov al, bl
+    out dx, al
+    pop ax
     pop dx
     pop bx
-    pop ax
     ret
 
-SC_MoveCursorForward:
+SC_CursorStep:
+    push bx
+    mov bl, [SC_CursorBuf+SC_Cursor.col]
+    cmp bl, SC_MaxCol
+    jle _stepright
+    call SC_CursorStepNewLine
+    jmp _stepdone
+_stepright:
+    call _SC_LineUsageInc
+    inc byte [SC_CursorBuf+SC_Cursor.col]
+_stepdone:
+    pop bx
+    ret
+
+SC_CursorStepBack:
+    push bx
+    mov bl, [SC_CursorBuf+SC_Cursor.col]
+    cmp bl, 0
+    jle _stepback_last_line
+
+    ; move left
+    call _SC_LineUsageDec
+    dec byte [SC_CursorBuf+SC_Cursor.col]
+    jmp _stepback_done
+_stepback_last_line:
+    mov bl, [SC_CursorBuf+SC_Cursor.row]
+    cmp bl, 0
+    jz _stepback_done
+    dec byte [SC_CursorBuf+SC_Cursor.row]
+    call _SC_LineUsageGet
+    mov byte [SC_CursorBuf+SC_Cursor.col], bl
+_stepback_done:
+    pop bx
+    ret
+
+SC_CursorStepNewLine:
+    inc byte [SC_CursorBuf+SC_Cursor.row]
+    mov byte [SC_CursorBuf+SC_Cursor.col], 0
+    ret
+
+_SC_LineUsageInc:
     push ax
     push bx
-    push dx
-    call SC_GetCursor
-
-    cmp dl, SC_Width
-    jl _go_right
-    cmp dh, SC_MaxRow
-    jnl _move_forward_over  ; right-bot
-    ; go_nextline
-    mov dl, 0h
-    inc dh ; row += 1
-    mov ah, 02h
-    int 10h
-    jmp _move_forward_over
-_go_right:
-    inc dl
-    mov ah, 02h ; set cursor position
-    int 10h
-_move_forward_over:
-    pop dx
+    mov ax, 0
+    mov al, [SC_CursorBuf+SC_Cursor.row]
+    mov bx, SC_LineUsageBuf
+    add bx, ax
+    inc byte [bx]
     pop bx
     pop ax
     ret
 
-SC_MoveCursorNextLine:
-    ; set y+=1, set x=0
-    call SC_GetCursor ; x,y in dl,dh
-    cmp dh, SC_Height
-    jnl _move_nextline_over ; no move
-    mov dl, 0
-    inc dh
-    call SC_MoveCursor
-_move_nextline_over:
+_SC_LineUsageDec:
+    push ax
+    push bx
+    mov ax, 0
+    mov al, [SC_CursorBuf+SC_Cursor.row]
+    mov bx, SC_LineUsageBuf
+    add bx, ax
+    dec byte [bx]
+    pop bx
+    pop ax
     ret
 
-;SC_MoveCursorPrevLine:
-    ;ret
-
-SC_InitCursor:
-    ; set cursor to 0,0
-    mov bx, 0
-    mov dx, 0
-    mov ah, 02h
-    int 10h
-    ; change shape
-    mov ah, 01h
-    mov cx, SC_CursorShape
-    int 10h
+_SC_LineUsageGet:
+    ; get current line usage to bx
+    push ax
+    mov ax, 0
+    mov al, [SC_CursorBuf+SC_Cursor.row]
+    mov bx, SC_LineUsageBuf
+    add bx, ax
+    mov byte bl, [bx]
+    mov bh, 0
+    pop ax
     ret
+
+SC_BufStart:
+SC_CursorBuf: times SC_Cursor_size db 0
+SC_LineUsageBuf: times SC_LineUsage_size db 0
 
 %endif

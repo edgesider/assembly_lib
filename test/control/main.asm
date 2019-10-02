@@ -5,22 +5,11 @@
     mov es, ax
 
     call SC_Init
-    mov dx, 0600h
-    call SC_MoveCursor
-
-    call SC_GetCursor
-    mov ax, 0
-    mov al, dh
-    call IO_PrintNum
-    call SC_MoveCursorNextLine
-    mov ax, 0
-    mov al, dl
-    call IO_PrintNum
-    call SC_MoveCursorNextLine
-
 _lp3:
     call IO_GetChar
-    call IO_PutChar
+    push word ax
+    call IO_PrintChar
+    add sp, 2
     jmp _lp3
 
     jmp $
