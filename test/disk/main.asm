@@ -1,4 +1,4 @@
-org 07c00h
+org 8000h
 Buffer equ 0100h
 
     mov ax, cs
@@ -6,25 +6,27 @@ Buffer equ 0100h
     mov es, ax
 
     call SC_Init
+    call IO_Init
     ;call TEST_ReadDiskInfo
     ;call TEST_ReadSectorLBA
     call TEST_ReadSectorCHS
 
     jmp $
 
-;TEST_ReadSectorLBA:
-    ;push byte 80h
-    ;push dword Buffer
-    ;push dword 0000h
-    ;push dword 0001h
-    ;push word 1
-    ;call DK_ReadSectorLBA
-    ;jc IO_Error
+TEST_ReadSectorLBA:
+    push byte 81h
+    push dword Buffer
+    push dword 0000h
+    push dword 0001h
+    push word 1
+    call DK_ReadSectorLBA
+    add sp, 2+4+8+2
+    jc IO_Error
 
-    ;push Buffer
-    ;push 5
-    ;call IO_Print_stack
-    ;ret
+    mov byte [Buffer+5], 0
+    push word Buffer
+    call IO_PrintStr
+    ret
 
 ;TEST_ReadDiskInfo:
     ;push 80h ; drive number: hd1
@@ -49,22 +51,24 @@ Buffer equ 0100h
     ;ret
 
 TEST_ReadSectorCHS:
-    push word 81h
-    push word Buffer
+    push byte 81h
+    push dword Buffer
+    push dword 0
     push dword 1200
     push word 1
-    call DK_ReadSectorCHS
-    add sp, 10
+    call DK_ReadSector
+    add sp, 2+4+8+2
 
+    mov byte [Buffer+5], 0
     push Buffer ; word
-    push 5 ; word
-    call IO_Print_stack
+    call IO_PrintStr
     add sp, 4
     ret
 
 %include "disk.asm"
 %include "io.asm"
 
+Str: db "test", 0
 infobuf resb DK_DiskInfo_size
 SuccStr: db "S"
 ;times 510-($-$$) db 0

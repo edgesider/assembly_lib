@@ -1,16 +1,20 @@
 %ifndef LIB_DISK
 %define LIB_DISK
 
+%include "config.asm"
+
 struc DK_DiskInfo
     .NumberofCylinder resw 2
     .HeadPerCylinder resb 1
     .SectorPerHead resb 1
 endstruc
 
-DK_ReadSectorLBA:
-    ; read sector via LBA
+DK_ReadSector:
+    ; read sector to ds:[bp+14]
+    %ifdef DISK_LBA
+    ; via LBA
     ;---parameters----
-    ; | disk index      |+18 byte
+    ; | disk index      |+18 word
     ; | buffer pointer  |+14 dword
     ; | start sector    |+6 qword
     ; | number of sector|+4 word
@@ -60,14 +64,13 @@ DK_ReadSectorLBA:
     add sp, 16
     pop bp
     ret
-
-DK_ReadSectorCHS:
-    ; read sector via CHS
+    %else
+    ; via CHS
     ;---parameters----
-    ; | disk index      |+12 word (only low byte will be used)
-    ; | buffer pointer  |+10 word (segment: ES)
-    ; | start sector    |+6 dword
-    ; | number of sector|+4 word (only low byte will be used)
+    ; | disk index      |+18 word (only lower byte will be used)
+    ; | buffer pointer  |+14 dword (only lower word will be used)
+    ; | start sector    |+6 qword (only lower dword will be used)
+    ; | number of sector|+4 word (only lower byte will be used)
     ;---parameters----
     ; | call-saved      |+2
     ; | saved-bp        |+0 <--bp <--sp
@@ -79,17 +82,12 @@ DK_ReadSectorCHS:
     ; |             |-DK_DiskInfo_size  <--sp
     sub sp, DK_DiskInfo_size
 
-    push word [bp+12]
+    push word [bp+18]
     mov ax, bp
     sub ax, DK_DiskInfo_size
     push ax
     call DK_ReadDiskInfo
     add sp, 4
-
-    mov ax, 0
-    ;mov al, [bp-DK_DiskInfo_size+DK_DiskInfo.NumberofCylinder]
-    mov al, [bp-DK_DiskInfo_size+DK_DiskInfo.HeadPerCylinder]
-    mov al, [bp-DK_DiskInfo_size+DK_DiskInfo.SectorPerHead]
 
     ; x, y, z = CHS tuple
     ; n = sector number
@@ -116,28 +114,35 @@ DK_ReadSectorCHS:
     div bx
     ; now y is in dx, x is in ax
 
+    push es
+    mov cx, ds
+    mov es, cx
+
     mov cl, [bp-1-DK_DiskInfo_size] ; cylinder-higher-2bit : sector
     inc cl
     mov ch, al  ; cylinder lower-8-bit
     shr ax, 2
     and al, 11000000b ; higher-2-bit
-    or cl, al
+    or cl, al   ; cylinder and sector in cx
     mov dh, dl  ; head in dl
     add sp, 1
-    mov bx, [bp+10] ; buffer
-    mov dl, [bp+12] ; disk index
+    mov bx, [bp+14] ; buffer
+    mov dl, [bp+18] ; disk index
     mov al, [bp+4]
     mov ah, 02h  ; read function
     int 13h
+
+    pop es
     jc IO_Error
 
     add sp, DK_DiskInfo_size
     pop bp
     ret
+    %endif
 
 DK_ReadDiskInfo:
     ;--parameters---
-    ; | drive index | byte TODO: be a word
+    ; | driver index| word
     ; | buffer      | word, pointer to an Info
     ;--parameters---
     ; | call-saved  | word
