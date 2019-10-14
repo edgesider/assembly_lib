@@ -5,9 +5,12 @@ org 8000h
     mov es, ax
 
 lp1:
-    ;call IO_GetChar
-    mov al, '1'
-    call IO_PutChar
-    jmp lp1
+    call SC_Init
+    push word Str
+    call IO_PrintStr
+    jmp $
 
-%include "../lib/io.asm"
+Str: db "Succeed!", 0x00
+
+%include "io.asm"
+%include "control.asm"

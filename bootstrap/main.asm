@@ -9,32 +9,32 @@ SectorToRead equ 10
     mov ds, ax
     mov es, ax
 
-    call SC_Init
+    call TinyLibInit
     push StrLoading
     push 19
-    call IO_Print_stack
+    call Print
     add sp, 4
-    call SC_MoveCursorNextLine
+    call MoveCursorNextLine
 
     push word DiskIndex
-    push word LoaderAddr
+    push dword LoaderAddr
+    push dword 0
     push dword 0
     push word SectorToRead
-    call DK_ReadSectorCHS
+    call ReadSector
     add sp, 10
 
     push StrLoaded
     push 36
-    call IO_Print_stack
+    call Print
 
-    call IO_GetChar
+    call GetChar
     jmp 0:LoaderAddr
 
 StrLoading: db "Loading from hda..."
 StrLoaded: db "Loaded! Press any key to continue..."
 
-%include "tinyio.asm"
-%include "tinydisk.asm"
+%include "tinylib.asm"
 
-times 510-($-$$) db 0
+;times 510-($-$$) db 0
 dw 0xaa55
