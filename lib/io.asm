@@ -6,6 +6,58 @@
 CH_Return equ 0x0d
 CH_Null equ 0x00
 
+IO_StrCmp:
+    ; return value in ax
+    ;---parameters---
+    ; | str1        |+10 dword segment:offset
+    ; | str2        |+6 dword segment:offset
+    ; | length      |+4 word
+    ;---parameters---
+    ; | call-saved  |+2
+    ; | saved-bp    |+0 <--bp <--sp
+    push bp
+    mov bp, sp
+
+    push ds
+    push es
+    push si
+    push di
+    push cx
+
+    mov si, [bp+10]  ; str1
+    mov ds, [bp+12]  ; str1
+    mov di, [bp+6]   ; str2
+    mov es, [bp+8]  ; str2
+    mov cx, [bp+4]   ; length
+_strcmp_loop0:
+    cmp cx, 0  ; string ends
+    jz _strcmp_loop0_end_true
+    dec cx
+    mov dl, [ds:si]
+    mov dh, [es:di]
+    sub dl, dh
+    jnz _strcmp_loop0_end_false
+    inc si
+    inc di
+    jmp _strcmp_loop0
+
+_strcmp_loop0_end_true:
+    mov ax, 0
+    jmp _strcmp_over
+_strcmp_loop0_end_false:
+    mov al, dl
+    mov ah, 0
+
+_strcmp_over:
+
+    pop cx
+    pop di
+    pop si
+    pop es
+    pop ds
+    pop bp
+    ret
+
 IO_PrintStr:
     ; print null-terminated string to screen
     ;---parameters:----
@@ -140,5 +192,5 @@ IO_Error:
     add sp, 2
     jmp $
 
-ErrStr: db 'Error!'
+ErrStr: db 'Error!', 0
 %endif

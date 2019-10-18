@@ -2,11 +2,22 @@
 %define LIB_DISK
 
 %include "config.asm"
+%include "io.asm"
 
 struc DK_DiskInfo
-    .NumberofCylinder resw 2
+    .NumberofCylinder resw 1
     .HeadPerCylinder resb 1
     .SectorPerHead resb 1
+endstruc
+
+struc DK_Fat12FileEntry
+    .Name resb 11
+    .Attr resb 1
+    .Res resb 10
+    .WrtTime resb 2
+    .WrtData resb 2
+    .FstClus resb 2
+    .Size resb 4
 endstruc
 
 DK_ReadSector:
@@ -15,7 +26,7 @@ DK_ReadSector:
     ; via LBA
     ;---parameters----
     ; | disk index      |+18 word
-    ; | buffer pointer  |+14 dword
+    ; | buffer pointer  |+14 dword segment:offset
     ; | start sector    |+6 qword
     ; | number of sector|+4 word
     ;---parameters----
@@ -29,7 +40,7 @@ DK_ReadSector:
     ; paramater struct:
     ;                   |-0 <--bp
     ; | start sector    |-8  qword
-    ; | buffer pointer  |-12 dword
+    ; | buffer pointer  |-12 dword segment:offset
     ; | number of sector|-14 word
     ; | unused          |-15 byte
     ; | DAP (10h)       |-16 byte <--sp
@@ -176,5 +187,108 @@ DK_ReadDiskInfo:
 
     pop bp
     ret
+
+DK_Fat12List:
+
+DK_Fat12Find:
+    ; find file named [bp+4] in disk whose index is [bp+8]
+    ; :return: void
+    ;----parameters----
+    ;| file description |+8 word; pointer to a DK_Fat12FileEntry
+    ;| disk index       |+6 word
+    ;| filename         |+4 word; pointer to filename, length=11
+    ;----parameters----
+    ;| call-saved       |+2 word
+    ;| saved-bp         |+0 <--bp <--sp
+    ;---stack top(bp)---
+    ;| entry remain     |-2 word
+    ;| next sector      |-4 word
+    ;| current entry    |-6 word
+
+    ; We need to know:
+    ; start of root (via count of fats and sector per each fat)
+    ; and count of root file entries
+ReadBuf equ 0100h
+
+FatCnt equ 2
+SecPerFat equ 9
+RootEntCnt equ 224
+EntPerSec equ 512/32 ; ==16
+BytePerEnt equ 32
+    push bp
+    mov bp, sp
+    sub sp, 6
+
+    ;for (int i = 224; i > 0; i--) {
+        ;if (current_ent >= 16) {
+            ;ReadNewSector(sector_to_read)
+            ;sector_to_read++
+            ;current_ent = 0
+        ;}
+        ;if (Compare(current_ent, filename) == 0) {
+            ;return true;
+        ;}
+        ;current_ent++
+    ;}
+    ;return false
+
+    mov word [bp-2], RootEntCnt
+    mov word [bp-4], 1+FatCnt*SecPerFat
+
+_DK_Fat12Find_Loop:
+
+    cmp word [bp-6], 16
+    jl _DK_Fat12Find_Endif0
+    push word [bp+6]
+    push 0
+    push word ReadBuf
+    push dword 0
+    push word 0
+    push word [bp-4] ; sector to read
+    push 1
+    call DK_ReadSector
+    add sp, 16
+    inc word [bp-4]
+    mov word [bp-6], 0
+_DK_Fat12Find_Endif0:
+
+    ; here compare an entry
+    mov ax, BytePerEnt
+    imul ax, [bp-6]
+    add ax, ReadBuf
+    push word 0
+    push ax
+    push ds
+    push word [bp+4]
+    push word 11
+    call IO_StrCmp
+    add sp, 10
+    cmp ax, 0
+    jz _DK_Fat12Find_Found
+    inc word [bp-6]
+    dec word [bp-2]
+
+    cmp word [bp-2], 0
+    jz _DK_Fat12Find_NotFound
+    jmp _DK_Fat12Find_Loop
+
+_DK_Fat12Find_Found:
+    push word strfound
+    call IO_PrintStr
+    add sp, 2
+    jmp _DK_Fat12Find_Over
+_DK_Fat12Find_NotFound:
+    push word strnotfound
+    call IO_PrintStr
+    add sp, 2
+_DK_Fat12Find_Over:
+
+    pop bp
+    ret
+
+DK_Fat12Read:
+
+strfound: db "found", 0
+strnotfound: db "not found", 0
 
 %endif

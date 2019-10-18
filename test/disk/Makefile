@@ -7,6 +7,10 @@ everything: img/fd.img main.asm
 	nasm main.asm -o bin/main.bin -I../../lib
 	dd if=bin/main.bin of=img/hda.img conv=notrunc
 
+main2: img/fd.img main2.asm
+	nasm main2.asm -o bin/main2.bin -I../../lib
+	dd if=bin/main2.bin of=img/hda.img conv=notrunc
+
 createimg: $(HDTMP) $(FDTMP)
 	cp $(HDTMP) ./img/hda.img
 	cp $(HDTMP) ./img/hdb.img
