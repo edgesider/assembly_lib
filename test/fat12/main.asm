@@ -9,7 +9,7 @@ Buffer equ 0100h
     push word FileEntryBuf
     push word 81h
     push word Filename
-    call DK_Fat12Find
+    call Fat12_Find
     add sp, 6
 
     cmp ax, 0
@@ -26,7 +26,7 @@ _endif
 
     jmp $
 
-%include "disk.asm"
+%include "fat12.asm"
 %include "io.asm"
 
 Filename: db "LOADER  BIN", 0
@@ -34,6 +34,6 @@ Str: db "test", 0
 Found: db "found", 0
 NotFound: db "not found", 0
 ;SuccStr: db "S"
-FileEntryBuf: resb DK_Fat12FileEntry_size
+FileEntryBuf: resb Fat12_FileEntry_size
 ;times 510-($-$$) db 0
 ;dw 0xaa55

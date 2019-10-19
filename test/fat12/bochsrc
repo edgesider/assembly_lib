@@ -14,7 +14,7 @@ ata0-master: type=disk, path="img/hda.img", mode=flat
 #ata0-master: type=none
 ata0-slave: type=none
 ata1: enabled=1, ioaddr1=0x170, ioaddr2=0x370, irq=15
-ata1-master: type=disk, path="img/hdb2.img", mode=flat
+ata1-master: type=disk, path="img/hdb.img", mode=flat
 ata1-slave: type=none
 ata2: enabled=0
 ata3: enabled=0
