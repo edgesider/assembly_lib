@@ -6,20 +6,34 @@ Buffer equ 0100h
     mov es, ax
 
     call SC_Init
-    push word 0
+    push word FileEntryBuf
     push word 81h
     push word Filename
     call DK_Fat12Find
     add sp, 6
+
+    cmp ax, 0
+    jz _notfound
+    push word Found
+    call IO_PrintStr
+    add sp, 2
+    jmp _endif
+_notfound:
+    push word NotFound
+    call IO_PrintStr
+    add sp, 2
+_endif
 
     jmp $
 
 %include "disk.asm"
 %include "io.asm"
 
-Filename: db "LOADER  BIN"
+Filename: db "LOADER  BIN", 0
 Str: db "test", 0
-infobuf resb DK_DiskInfo_size
-SuccStr: db "S"
+Found: db "found", 0
+NotFound: db "not found", 0
+;SuccStr: db "S"
+FileEntryBuf: resb DK_Fat12FileEntry_size
 ;times 510-($-$$) db 0
 ;dw 0xaa55

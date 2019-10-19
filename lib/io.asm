@@ -7,7 +7,7 @@ CH_Return equ 0x0d
 CH_Null equ 0x00
 
 IO_StrCmp:
-    ; return value in ax
+    ; :return(ax): 0 if equal, other if not equal
     ;---parameters---
     ; | str1        |+10 dword segment:offset
     ; | str2        |+6 dword segment:offset
@@ -74,7 +74,7 @@ IO_PrintStr:
     mov ah, 0
     mov bx, [bp+4]
 _print_str_loop0:
-    mov al, [bx]
+    mov al, [ds:bx]
     inc bx
     cmp al, 0
     jz _print_str_end

@@ -52,19 +52,19 @@ DK_ReadSector:
     mov word ax, [bp+4]
     mov word [bp-14], ax
 
-    mov eax, [bp+14]
-    mov [bp-12], eax
-    mov eax, [bp+16]
-    mov [bp-10], eax
+    mov ax, [bp+14]
+    mov [bp-12], ax
+    mov ax, [bp+16]
+    mov [bp-10], ax
 
-    mov eax, [bp+6]
-    mov [bp-8], eax
-    mov eax, [bp+8]
-    mov [bp-6], eax
-    mov eax, [bp+10]
-    mov [bp-4], eax
-    mov eax, [bp+12]
-    mov [bp-2], eax
+    mov ax, [bp+6]
+    mov [bp-8], ax
+    mov ax, [bp+8]
+    mov [bp-6], ax
+    mov ax, [bp+10]
+    mov [bp-4], ax
+    mov ax, [bp+12]
+    mov [bp-2], ax
     mov si, sp
 
     mov byte dl, [bp+18]
@@ -204,20 +204,21 @@ DK_Fat12Find:
     ;| entry remain     |-2 word
     ;| next sector      |-4 word
     ;| current entry    |-6 word
+    ;| tmp buffer       |-518 byte*512
 
     ; We need to know:
     ; start of root (via count of fats and sector per each fat)
     ; and count of root file entries
-ReadBuf equ 0100h
+Fat12_TmpBuf equ 0200h
 
-FatCnt equ 2
-SecPerFat equ 9
-RootEntCnt equ 224
-EntPerSec equ 512/32 ; ==16
-BytePerEnt equ 32
+Fat12_FatCnt equ 2
+Fat12_SecPerFat equ 9
+Fat12_RootEntCnt equ 224
+Fat12_EntPerSec equ 512/32 ; ==16
+Fat12_BytePerEnt equ 32
     push bp
     mov bp, sp
-    sub sp, 6
+    sub sp, 518
 
     ;for (int i = 224; i > 0; i--) {
         ;if (current_ent >= 16) {
@@ -232,16 +233,17 @@ BytePerEnt equ 32
     ;}
     ;return false
 
-    mov word [bp-2], RootEntCnt
-    mov word [bp-4], 1+FatCnt*SecPerFat
+    mov word [bp-2], Fat12_RootEntCnt
+    mov word [bp-4], 1+Fat12_FatCnt*Fat12_SecPerFat
+    mov word [bp-6], 16
 
 _DK_Fat12Find_Loop:
-
     cmp word [bp-6], 16
     jl _DK_Fat12Find_Endif0
     push word [bp+6]
-    push 0
-    push word ReadBuf
+    push ss
+    lea bx, [bp-518]
+    push bx
     push dword 0
     push word 0
     push word [bp-4] ; sector to read
@@ -251,11 +253,11 @@ _DK_Fat12Find_Loop:
     inc word [bp-4]
     mov word [bp-6], 0
 _DK_Fat12Find_Endif0:
-
     ; here compare an entry
-    mov ax, BytePerEnt
+    mov ax, Fat12_BytePerEnt
     imul ax, [bp-6]
-    add ax, ReadBuf
+    lea bx, [bp-518]
+    add ax, bx
     push word 0
     push ax
     push ds
@@ -273,22 +275,31 @@ _DK_Fat12Find_Endif0:
     jmp _DK_Fat12Find_Loop
 
 _DK_Fat12Find_Found:
-    push word strfound
-    call IO_PrintStr
-    add sp, 2
+    push si
+    lea ax, [bp-518]
+    mov bx, Fat12_BytePerEnt
+    imul bx, [bp-6]
+    add bx, ax  ; bx now point to current file entry
+
+    mov cx, Fat12_BytePerEnt
+    mov si, [bp+8]
+_DK_Fat12Find_Loop1:
+    mov ax, [bx]
+    mov [si], ax
+    inc bx
+    inc si
+    loop _DK_Fat12Find_Loop1
+    pop si
+    mov ax, [bp+8]
     jmp _DK_Fat12Find_Over
 _DK_Fat12Find_NotFound:
-    push word strnotfound
-    call IO_PrintStr
-    add sp, 2
+    mov ax, 0
 _DK_Fat12Find_Over:
 
+    add sp, 518
     pop bp
     ret
 
 DK_Fat12Read:
-
-strfound: db "found", 0
-strnotfound: db "not found", 0
 
 %endif

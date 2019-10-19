@@ -30,14 +30,9 @@
     push word CH_Return
     call IO_PrintChar
 
-    mov ax, DK_DiskInfo_size
-    call IO_PrintNum
-
-    push word CH_Return
-    call IO_PrintChar
-
-    mov ax, DK_Fat12FileEntry_size
-    call IO_PrintNum
+    push word str1
+    call IO_PrintStr
+    add sp, 2
 
 p:
     call IO_GetChar
@@ -52,6 +47,6 @@ p:
 %include "disk.asm"
 
 str: db CH_Return, "abcd", CH_Return, CH_Null
-str1: db "abcd"
-str2: db "abcd"
-str3: db "dcba"
+str1: db "abcd", 0
+str2: db "abcd", 0
+str3: db "dcba", 0
